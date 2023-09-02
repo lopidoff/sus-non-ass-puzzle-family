@@ -1,4 +1,4 @@
-# sus-ass puzzle v0.1
+# sus-ass puzzle v0.2
 
 import colorama
 
@@ -6,7 +6,7 @@ colorama.init()
 
 cell_border = "║"
 blank = " "
-default_rows = 10
+default_rows = 6
 solved = 0
 
 moves = ["/","\\"]                              # movement characters
@@ -39,7 +39,7 @@ def apply_moves(board, action):
         if k in (moves + states):
             board.play_action(k,0,0)
             ind += 1
-        elif k == ">":
+        elif k == ">" and board.depth:
             return ind+1, "c"
         elif k == "<":
             return ind+1, "o"
@@ -58,20 +58,28 @@ class Board:
         return len(self.state)
     def get_entry(self, row, entry):                # spits out requested entry
         return self.state[row][entry]
+    def extend_to(self,endpoint):                   # ensures the board is at least [endpoint] long
+        if self.get_length() < endpoint:
+            for i in range(self.get_length(),endpoint):
+                new_row = [blank] * (i+1)
+                self.state.append(new_row)
     def play_action(self, new, row, entry):         # plays operation on board
         current = self.state[row][entry]
         new_val,row_shift,entry_shift = single_operation(current,new)
         self.state[row][entry] = blank
+        if row+row_shift >= self.get_length():
+            self.extend_to(row+row_shift+1)
         if self.state[row+row_shift][entry+entry_shift] == blank:
             self.state[row+row_shift][entry+entry_shift] = new_val
         else:
             self.play_action(new_val, row+row_shift, entry+entry_shift)
     def compose_board(self, board):                 # composes external board
-        if self.get_length() == board.get_length():
-            num = self.get_length()-1
-            for i in range(num,-1,-1):
-                for j in range(i+1):
-                    self.play_action(board.get_entry(i,j),i,j)
+        self.extend_to(board.get_length())
+        board.extend_to(self.get_length())
+        num = self.get_length()-1
+        for i in range(num,-1,-1):
+            for j in range(i+1):
+                self.play_action(board.get_entry(i,j),i,j)
     def __str__(self):
         result = ""
         if self.depth:
