@@ -1,4 +1,4 @@
-# sus-ass puzzle v0.2
+# sus-ass puzzle v0.3
 
 import colorama
 
@@ -9,43 +9,55 @@ blank = " "
 default_rows = 6
 solved = 0
 
-moves = ["/","\\"]                              # movement characters
-states = ["*"]                                  # states
-command = ["<",">"]                             # break characters
+moves = ["/","\\"]                                  # movement characters
+states = ["*"]                                      # states
+command = ["(",")"]                                 # break characters
+meta = ["~","#","%"]                                # meta characters
 
-def algebraic(current, new):                    # holds algebraic rules
+def algebraic(current, new):                        # holds algebraic rules
     return blank
 
-def single_operation(current, new):             # outputs new state & location
+def single_operation(current, new):                 # outputs new state & location
     if current == blank:
         return new,0,0
     elif new == blank:
         return current,0,0
-    elif current == "\\":
+    elif current == moves[1]:
         return new,1,0
-    elif current == "/":
+    elif current == moves[0]:
         return new,1,1
-    elif new == "\\":
+    elif new == moves[1]:
         return current,1,0
-    elif new == "/":
+    elif new == moves[0]:
         return current,1,1
     elif new in states:
         return algebraic(current,new),0,0
+
+# not currently used
+def apply_meta(command):
+    if command == meta[0]:                          # kill program where it stands, new game
+        return "k"
+    elif command == meta[1]:                        # show block structure explanation
+        return "b"
+    elif command == meta[2]:                        # generate scramble for puzzle
+        return "s"
 
 def apply_moves(board, action):
     ind = 0
     while ind < len(action):
         k = action[ind]
+        #if k in meta:
+        #    return None, apply_meta(k)
         if k in (moves + states):
             board.play_action(k,0,0)
             ind += 1
-        elif k == ">" and board.depth:
+        elif k == command[1] and board.depth:       # closed bracket
             return ind+1, "c"
-        elif k == "<":
+        elif k == command[0]:                       # open bracket
             return ind+1, "o"
         else:
             ind += 1
-    return ind, "f"
+    return ind, "f"                                 # finished string
 
 class Board:
     def __init__(self,depth):
@@ -101,14 +113,14 @@ def game(overflow,depth=0):
     while overflow != "":
         ind,end_type = apply_moves(board, overflow)
         saved_index += ind
-        if end_type == "c":
+        if end_type == "c":                         # close a bracket
             return board, saved_index, overflow[ind:]
-        elif end_type == "o":
+        elif end_type == "o":                       # open a bracket
             new_board,indx,overoverflow = game(overflow[ind:],depth+1)
             board.compose_board(new_board)
             ind += indx
-            overflow = overoverflow + overflow[ind:]
-        elif end_type == "f":
+            overflow = overoverflow
+        elif end_type == "f":                       # finished string
             overflow = overflow[ind:]
     
     while not solved:
@@ -124,8 +136,11 @@ def game(overflow,depth=0):
                 new_board,indx,backlash = game(action[ind:],depth+1)
                 board.compose_board(new_board)
                 ind += indx
-                action = backlash + action[ind:]
+                action = backlash
             elif end_type == "f":
                 action = action[ind:]
 
+print("\033c\033[3J", end='')
+print(moves[0] + " moves up-right, " + moves[1] + " moves up-left")
+print(command[0] + " increases depth, " + command[1] + " closes depth board")
 game("")
